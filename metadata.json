@@ -1,0 +1,6 @@
+{
+  "name": "Peppsbite",
+  "description": "Fast, fresh grocery delivery app with curated essentials, easy checkout, and instant ordering.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
