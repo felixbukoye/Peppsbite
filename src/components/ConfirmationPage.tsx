@@ -1,13 +1,14 @@
 import React from "react";
 import { useOrders } from "../context/OrderContext";
 import { useNavigation } from "../context/NavigationContext";
-import { formatPrice } from "../lib/format";
+import { STATUS_LABELS, STATUS_STYLES, formatPrice } from "../lib/format";
 
 export function ConfirmationPage({ id }: { id: string }) {
   const { getOrder } = useOrders();
   const { navigate } = useNavigation();
   const orderId = Number(id);
   const order = getOrder(orderId);
+  const isPending = order?.status === "pending";
 
   return (
     <div className="flex min-h-[75vh] flex-col items-center justify-center px-8 text-center animate-[fadeIn_0.3s_ease-out]">
@@ -16,10 +17,12 @@ export function ConfirmationPage({ id }: { id: string }) {
       </div>
 
       <h1 className="text-2xl font-extrabold text-neutral-900 tracking-tight">
-        Order placed!
+        {isPending ? "Almost there!" : "Order placed!"}
       </h1>
       <p className="mt-2 text-sm text-neutral-500">
-        Your order #{order?.id || id} is being prepared by our store team
+        {isPending
+          ? `Order #${order?.id || id} is awaiting payment confirmation`
+          : `Your order #${order?.id || id} is being prepared by our store team`}
       </p>
 
       {order ? (
@@ -31,13 +34,17 @@ export function ConfirmationPage({ id }: { id: string }) {
             </span>
           </div>
           <div className="mt-2.5 flex justify-between text-sm">
-            <span className="text-neutral-500">Total paid</span>
+            <span className="text-neutral-500">{isPending ? "Total due" : "Total paid"}</span>
             <span className="font-bold text-[#E8622C]">{formatPrice(order.total)}</span>
           </div>
           <div className="mt-2.5 flex justify-between text-sm border-t border-neutral-100 pt-2.5">
             <span className="text-neutral-500">Status</span>
-            <span className="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full text-xs">
-              Order confirmed
+            <span
+              className={`font-semibold px-2 py-0.5 rounded-full text-xs ${
+                order ? STATUS_STYLES[order.status] : "bg-blue-50 text-blue-600"
+              }`}
+            >
+              {order ? STATUS_LABELS[order.status] : "Order confirmed"}
             </span>
           </div>
         </div>

@@ -10,10 +10,10 @@ const RECENT_KEY = "peppsbite_recent_searches";
 const TRENDING = ["Milk", "Chocolate", "Chips", "Bread", "Rice", "Coffee", "Apples", "Bananas"];
 
 const PRICE_RANGES = [
-  { label: "Under $10", min: undefined as number | undefined, max: 10 },
-  { label: "$10 – $20", min: 10, max: 20 },
-  { label: "$20 – $50", min: 20, max: 50 },
-  { label: "$50+", min: 50, max: undefined as number | undefined },
+  { label: "Under ₦2,000", min: undefined as number | undefined, max: 2000 },
+  { label: "₦2,000 – ₦5,000", min: 2000, max: 5000 },
+  { label: "₦5,000 – ₦10,000", min: 5000, max: 10000 },
+  { label: "₦10,000+", min: 10000, max: undefined as number | undefined },
 ];
 
 export function SearchPage() {

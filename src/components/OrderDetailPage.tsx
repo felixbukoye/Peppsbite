@@ -143,6 +143,14 @@ export function OrderDetailPage({ id }: { id: string }) {
               <span className="text-neutral-400">Payment</span>
               <span className="font-semibold text-neutral-900">{order.paymentMethod}</span>
             </div>
+            {order.paymentReference ? (
+              <div className="flex justify-between">
+                <span className="text-neutral-400">Reference</span>
+                <span className="max-w-[65%] truncate text-right font-mono text-xs font-medium text-neutral-700">
+                  {order.paymentReference}
+                </span>
+              </div>
+            ) : null}
             {order.deliveryInstructions ? (
               <div className="flex justify-between">
                 <span className="text-neutral-400">Instructions</span>

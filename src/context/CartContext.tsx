@@ -8,12 +8,13 @@ import React, {
   type ReactNode,
 } from "react";
 import type { CartItem, Product } from "../types";
+import { formatPrice } from "../lib/format";
 import { useToast } from "./ToastContext";
 
 const STORAGE_KEY = "peppsbite_cart";
 const PROMO_KEY = "peppsbite_promo";
-const FREE_DELIVERY_THRESHOLD = 25;
-const DELIVERY_FEE = 3.99;
+const FREE_DELIVERY_THRESHOLD = 15000; // NGN 15,000
+const DELIVERY_FEE = 2500; // NGN 2,500
 const VALID_PROMO = "PEPPS20";
 
 type CartContextValue = {
@@ -222,7 +223,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         } catch {
           // ignore
         }
-        showToast(`Promo code applied! You saved $${(subtotal * 0.2).toFixed(2)}`);
+        showToast(`Promo code applied! You saved ${formatPrice(subtotal * 0.2)}`);
         return true;
       }
       showToast("This code isn't valid or has expired");

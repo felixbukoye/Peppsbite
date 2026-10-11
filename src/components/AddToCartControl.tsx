@@ -1,6 +1,7 @@
 import React from "react";
 import { useCart } from "../context/CartContext";
 import { MinusIcon, PlusIcon } from "./icons";
+import { formatPrice } from "../lib/format";
 import type { Product } from "../types";
 
 export function AddToCartControl({
@@ -37,7 +38,7 @@ export function AddToCartControl({
           e.stopPropagation();
           addItem(product, 1);
         }}
-        aria-label={`Add ${product.name} to cart, $${product.price.toFixed(2)}`}
+        aria-label={`Add ${product.name} to cart, ${formatPrice(product.price)}`}
         className={`${dims} flex items-center justify-center rounded-full bg-black text-white shadow-md transition-all active:scale-90 hover:bg-neutral-800`}
       >
         <PlusIcon className={iconDims} />

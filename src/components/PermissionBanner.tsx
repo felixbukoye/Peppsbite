@@ -34,20 +34,20 @@ export function PermissionBanner() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         () => {
-          setLocation("New York, USA");
+          setLocation("Lagos, Nigeria");
           dismiss();
           showToast("Location enabled");
         },
         () => {
-          setLocation("New York, USA");
+          setLocation("Lagos, Nigeria");
           dismiss();
-          showToast("Location set to New York");
+          showToast("Location set to Lagos");
         }
       );
     } else {
-      setLocation("New York, USA");
+      setLocation("Lagos, Nigeria");
       dismiss();
-      showToast("Location set to New York");
+      showToast("Location set to Lagos");
     }
   };
 
