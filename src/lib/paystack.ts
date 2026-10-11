@@ -23,7 +23,7 @@
 /** Paystack's hosted inline checkout script. */
 export const INLINE_SCRIPT_URL = "https://js.paystack.co/v1/inline.js";
 
-/** Backend route that must exist for step 4 above. */
+/** Backend route that confirms the charge (server/index.ts, also deployed as api/index.ts). */
 export const VERIFY_ENDPOINT = "/api/paystack/verify";
 
 // `import.meta.env` only exists under Vite; guard it so this module is safe to
@@ -205,8 +205,12 @@ export const STATUS_ENDPOINT = "/api/paystack/payments";
 
 export type InitializeResult =
   | { status: "created"; reference: string }
-  /** The backend is not running. The caller decides whether to fall back. */
-  | { status: "unavailable" }
+  /**
+   * The backend is not reachable - not deployed at this path, still cold, or
+   * simply not running locally. The caller decides whether to fall back.
+   */
+  | { status: "unavailable"; message: string }
+  /** The backend answered and refused the request. */
   | { status: "rejected"; message: string };
 
 /**
@@ -238,6 +242,22 @@ export async function initializePayment(options: {
 
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { error?: string };
+
+      // 404 means nothing is serving this path: the deployment has no `/api`
+      // functions (a static-only deploy), or a proxy/base path is misrouting
+      // them. 5xx is the API being unhealthy. Either way the checkout can
+      // still take payment - the popup only needs the public key - so report
+      // "unavailable" and let the caller decide, instead of blocking the sale.
+      if (res.status === 404 || res.status === 410 || res.status >= 500) {
+        return {
+          status: "unavailable",
+          message:
+            res.status === 404
+              ? `No payment server at ${INITIALIZE_ENDPOINT} (HTTP 404). Continuing without server-side verification.`
+              : `The payment server is unavailable (HTTP ${res.status}). Continuing without server-side verification.`,
+        };
+      }
+
       return {
         status: "rejected",
         message: body.error ?? `Could not start the payment (HTTP ${res.status}).`,
@@ -251,7 +271,10 @@ export async function initializePayment(options: {
     return { status: "created", reference: data.reference };
   } catch {
     // Network error / backend down - distinct from an explicit rejection.
-    return { status: "unavailable" };
+    return {
+      status: "unavailable",
+      message: "Could not reach the payment server. Continuing without server-side verification.",
+    };
   }
 }
 
@@ -275,13 +298,19 @@ export type VerifyResult = {
   status?: string;
   amountKobo?: number;
   currency?: string;
+  /**
+   * False when the server confirmed the charge with Paystack but had no
+   * matching intent of its own to compare the amount against (see the
+   * in-memory store note in server/payments.ts).
+   */
+  crossChecked?: boolean;
 };
 
 /**
  * Asks OUR backend to confirm the charge against Paystack.
  *
- * This endpoint does not exist yet — see the integration notes. Until it does,
- * callers should treat a thrown error as "not yet wired", not as "failed".
+ * A thrown error means we could not get an answer - not that the payment
+ * failed. Callers should leave the order pending rather than cancelling it.
  */
 export async function verifyTransaction(reference: string): Promise<VerifyResult> {
   const res = await fetch(VERIFY_ENDPOINT, {

@@ -10,8 +10,8 @@
  *   PAYSTACK_API_BASE    override for tests; defaults to https://api.paystack.co
  */
 import "dotenv/config";
-import { createApp } from "./index";
-import { isSecretKey, keyMode } from "./paystack";
+import { createApp } from "./index.js";
+import { isSecretKey, keyMode } from "./paystack.js";
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";
