@@ -14,7 +14,7 @@ export function HomePage() {
   const { navigate } = useNavigation();
 
   const allNeeds = INITIAL_PRODUCTS.filter((p) => p.collections.includes("all-needs"));
-  const belowTwenty = INITIAL_PRODUCTS.filter((p) => p.collections.includes("below-20"));
+  const belowFiveK = INITIAL_PRODUCTS.filter((p) => p.collections.includes("below-5k"));
   const freshPicks = INITIAL_PRODUCTS.filter((p) => p.collections.includes("fresh-picks"));
 
   return (
@@ -60,9 +60,9 @@ export function HomePage() {
       />
 
       <CategorySection
-        title="Everything here below $20!"
-        seeAllHref="/category/below-20"
-        products={belowTwenty}
+        title="Everything here below ₦5,000!"
+        seeAllHref="/category/below-5k"
+        products={belowFiveK}
       />
 
       <CategorySection

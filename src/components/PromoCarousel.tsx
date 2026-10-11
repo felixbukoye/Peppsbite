@@ -37,7 +37,7 @@ const PROMOTIONS: PromoItem[] = [
     id: "groceries",
     categorySlug: "/category/dairy",
     badgeLabel: "Supermarket Prices",
-    badgeDiscount: "$0 Delivery",
+    badgeDiscount: "₦0 Delivery",
     emoji: "🥛",
     accentColor: "bg-[#E8622C]",
     badgeBorder: "border-orange-400/40",

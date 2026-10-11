@@ -5,8 +5,8 @@ import { CheckIcon, StarIcon } from "./icons";
 
 const PERKS = [
   {
-    title: "$0 Delivery Fees",
-    desc: "Free instant delivery on all orders over $15, saving you up to $40 every month.",
+    title: "₦0 Delivery Fees",
+    desc: "Free instant delivery on all orders over ₦15,000, saving you up to ₦30,000 every month.",
   },
   {
     title: "Member Exclusive Discounts",
@@ -57,7 +57,7 @@ export function PlansPage() {
                 Active Membership: {subscription.plan === "annual" ? "Annual Plan" : "Monthly Plan"}
               </p>
               <p className="text-[11px] text-white/70 mt-0.5">
-                Enjoying $0 delivery fee and exclusive member deals.
+                Enjoying ₦0 delivery fee and exclusive member deals.
               </p>
             </div>
           ) : null}
@@ -81,8 +81,8 @@ export function PlansPage() {
                   Save 20%
                 </span>
                 <span className="text-xs font-bold text-neutral-900">Annual Plan</span>
-                <span className="mt-2 text-xl font-extrabold text-neutral-900">$79.99</span>
-                <span className="text-[10px] text-neutral-500">per year ($6.66/mo)</span>
+                <span className="mt-2 text-xl font-extrabold text-neutral-900">₦57,600</span>
+                <span className="text-[10px] text-neutral-500">per year (₦4,800/mo)</span>
               </button>
 
               <button
@@ -95,7 +95,7 @@ export function PlansPage() {
                 }`}
               >
                 <span className="text-xs font-bold text-neutral-900">Monthly Plan</span>
-                <span className="mt-2 text-xl font-extrabold text-neutral-900">$9.99</span>
+                <span className="mt-2 text-xl font-extrabold text-neutral-900">₦6,000</span>
                 <span className="text-[10px] text-neutral-500">billed monthly</span>
               </button>
             </div>

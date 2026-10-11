@@ -10,7 +10,7 @@ import React, {
 import { useToast } from "./ToastContext";
 
 const STORAGE_KEY = "peppsbite_location";
-const DEFAULT_LOCATION = "New York, USA";
+const DEFAULT_LOCATION = "Lagos, Nigeria";
 
 type LocationContextValue = {
   location: string;

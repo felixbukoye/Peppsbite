@@ -3,15 +3,26 @@ import { useLocation } from "../context/LocationContext";
 import { MapPinIcon, XIcon } from "./icons";
 
 const SUGGESTIONS = [
-  "New York, USA",
-  "Brooklyn, USA",
-  "Jersey City, USA",
-  "Los Angeles, USA",
-  "Chicago, USA",
-  "San Francisco, USA",
-  "Boston, USA",
-  "Seattle, USA",
-  "Austin, USA",
+  // Lagos areas (primary market)
+  "Lekki Phase 1, Lagos",
+  "Victoria Island, Lagos",
+  "Ikoyi, Lagos",
+  "Ikeja GRA, Lagos",
+  "Yaba, Lagos",
+  "Surulere, Lagos",
+  "Ajah, Lagos",
+  "Magodo, Lagos",
+  "Festac Town, Lagos",
+  "Ikorodu, Lagos",
+  // Other Nigerian cities
+  "Abuja (FCT)",
+  "Port Harcourt, Rivers",
+  "Ibadan, Oyo",
+  "Kano, Kano",
+  "Enugu, Enugu",
+  "Benin City, Edo",
+  "Kaduna, Kaduna",
+  "Warri, Delta",
 ];
 
 export function LocationBar() {

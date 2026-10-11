@@ -30,6 +30,7 @@ export type CartItem = {
 };
 
 export type OrderStatus =
+  | "pending"
   | "confirmed"
   | "preparing"
   | "on_the_way"
@@ -54,6 +55,8 @@ export type OrderDTO = {
   deliveryTime: string;
   deliveryInstructions: string;
   paymentMethod: string;
+  /** Paystack transaction reference, present only for Paystack payments. */
+  paymentReference?: string | null;
   promoCode: string | null;
   subtotal: number;
   deliveryFee: number;

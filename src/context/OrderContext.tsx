@@ -7,7 +7,7 @@ import React, {
   useState,
   type ReactNode,
 } from "react";
-import type { OrderDTO, SubscriptionDTO } from "../types";
+import type { OrderDTO, OrderStatus, SubscriptionDTO } from "../types";
 import { deriveStatus } from "../lib/format";
 import { useToast } from "./ToastContext";
 
@@ -27,13 +27,19 @@ type OrderContextValue = {
     deliveryTime: string;
     deliveryInstructions: string;
     paymentMethod: string;
+    paymentReference?: string | null;
     promoCode: string | null;
     subtotal: number;
     deliveryFee: number;
     discount: number;
     total: number;
+    status?: OrderStatus;
   }) => OrderDTO;
   getOrder: (id: number) => OrderDTO | undefined;
+  /** Promote a pending Paystack order to confirmed once the charge is verified. */
+  markOrderPaid: (id: number) => void;
+  /** Discard a pending order the customer abandoned before paying. */
+  removeOrder: (id: number) => void;
   updateSubscription: (plan: "monthly" | "annual") => void;
   cancelSubscription: () => void;
 };
@@ -85,20 +91,24 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       deliveryTime: string;
       deliveryInstructions: string;
       paymentMethod: string;
+      paymentReference?: string | null;
       promoCode: string | null;
       subtotal: number;
       deliveryFee: number;
       discount: number;
       total: number;
+      status?: OrderStatus;
     }): OrderDTO => {
       const newId = Date.now() % 1000000;
       const newOrder: OrderDTO = {
         id: newId,
-        status: "confirmed",
+        // Paystack orders start pending and are promoted by markOrderPaid.
+        status: payload.status ?? "confirmed",
         deliveryAddress: payload.deliveryAddress,
         deliveryTime: payload.deliveryTime,
         deliveryInstructions: payload.deliveryInstructions,
         paymentMethod: payload.paymentMethod,
+        paymentReference: payload.paymentReference ?? null,
         promoCode: payload.promoCode,
         subtotal: payload.subtotal,
         deliveryFee: payload.deliveryFee,
@@ -121,6 +131,33 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       return newOrder;
     },
     []
+  );
+
+  const persistOrders = useCallback((next: OrderDTO[]): OrderDTO[] => {
+    try {
+      window.localStorage.setItem(ORDERS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+    return next;
+  }, []);
+
+  const markOrderPaid = useCallback(
+    (id: number) => {
+      setOrders((prev) =>
+        persistOrders(
+          prev.map((o) => (o.id === id ? { ...o, status: "confirmed" as const } : o)),
+        ),
+      );
+    },
+    [persistOrders],
+  );
+
+  const removeOrder = useCallback(
+    (id: number) => {
+      setOrders((prev) => persistOrders(prev.filter((o) => o.id !== id)));
+    },
+    [persistOrders],
   );
 
   const getOrder = useCallback(
@@ -212,6 +249,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       isWishlisted,
       createOrder,
       getOrder,
+      markOrderPaid,
+      removeOrder,
       updateSubscription,
       cancelSubscription,
     }),
@@ -223,6 +262,8 @@ export function OrderProvider({ children }: { children: ReactNode }) {
       isWishlisted,
       createOrder,
       getOrder,
+      markOrderPaid,
+      removeOrder,
       updateSubscription,
       cancelSubscription,
     ]

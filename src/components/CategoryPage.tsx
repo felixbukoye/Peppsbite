@@ -6,7 +6,7 @@ import { EmptyState } from "./EmptyState";
 
 const TITLES: Record<string, string> = {
   "all-needs": "We have all your needs",
-  "below-20": "Everything here below $20!",
+  "below-5k": "Everything here below ₦5,000!",
   "fresh-picks": "Fresh picks for you",
 };
 
