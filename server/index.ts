@@ -11,7 +11,7 @@
  * the raw request bytes - Paystack's signature is an HMAC over those exact
  * bytes and re-serialising parsed JSON will not reproduce them.
  */
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import crypto from "node:crypto";
 import {
   PaystackApiError,
@@ -19,8 +19,64 @@ import {
   isValidSignature,
   keyMode,
   verifyReference,
-} from "./paystack";
-import { PaymentStore, store as sharedStore } from "./payments";
+} from "./paystack.js";
+import { PaymentStore, store as sharedStore } from "./payments.js";
+
+/**
+ * The Vercel deployment funnels every `/api/*` path into a single function
+ * file by rewriting to `/api/index` and handing the original path over as a
+ * query param (see `vercel.json`). Depending on how the rewrite is matched the
+ * captured path shows up as `__vpath` (substituted into our destination) or as
+ * `path` (Vercel's own capture forwarding) - accept either.
+ *
+ * These names are an internal detail of the deployment, never part of the
+ * public API, and are absent when the pretty URL arrives intact (`npm run dev`,
+ * any host that serves the Express app directly).
+ */
+const REWRITE_PATH_PARAMS = ["__vpath", "path"];
+
+/** Paths the rewrite above can land on before routing. */
+function isFunctionRoot(pathname: string): boolean {
+  const normalized = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return normalized === "/api" || normalized === "/api/index";
+}
+
+/**
+ * Puts the original path back on `req.url`.
+ *
+ * Without this every request arrives as `/api/index?__vpath=...` and Express
+ * would 404 on routes it clearly has. Runs before any parsing or routing.
+ */
+function restoreRewrittenPath(req: Request, _res: Response, next: NextFunction): void {
+  const url = req.url ?? "/";
+  const queryIndex = url.indexOf("?");
+  const pathname = queryIndex === -1 ? url : url.slice(0, queryIndex);
+
+  // Remember what actually arrived so /api/health and the 404 handler can
+  // report it - that is what makes a misrouted deployment diagnosable.
+  (req as Request & { incomingUrl?: string }).incomingUrl = url;
+
+  if (!isFunctionRoot(pathname)) {
+    next();
+    return;
+  }
+
+  const params = new URLSearchParams(queryIndex === -1 ? "" : url.slice(queryIndex + 1));
+  const vpath = REWRITE_PATH_PARAMS.map((name) => params.get(name)).find((value) => !!value);
+
+  if (!vpath) {
+    next();
+    return;
+  }
+
+  for (const name of REWRITE_PATH_PARAMS) {
+    params.delete(name);
+  }
+
+  const query = params.toString();
+  req.url = `/api/${vpath.replace(/^\/+/, "")}${query ? `?${query}` : ""}`;
+  next();
+}
 
 export type AppOptions = {
   secretKey?: string;
@@ -44,6 +100,9 @@ export function createApp(options: AppOptions = {}): AppDeps {
 
   const app = express();
   app.disable("x-powered-by");
+
+  // Undo the production rewrite (must run before any parsing or routing).
+  app.use(restoreRewrittenPath);
 
   // ---------------------------------------------------------------- webhook
   // Raw body parser, scoped to this route only.
@@ -122,7 +181,7 @@ export function createApp(options: AppOptions = {}): AppDeps {
   app.use(express.json({ limit: "100kb" }));
 
   // ----------------------------------------------------------------- health
-  app.get("/api/health", (_req: Request, res: Response) => {
+  app.get("/api/health", (req: Request, res: Response) => {
     const key = secretKey();
     res.json({
       ok: true,
@@ -131,6 +190,10 @@ export function createApp(options: AppOptions = {}): AppDeps {
       mode: keyMode(key ?? ""),
       pending: payments.list("pending").length,
       paid: payments.list("paid").length,
+      // The URL as received by the deployment, before the rewrite is undone.
+      // Handy for confirming the API is reachable at all: open /api/health in
+      // a browser on the deployed site.
+      requestUrl: (req as Request & { incomingUrl?: string }).incomingUrl ?? req.url,
     });
   });
 
@@ -177,29 +240,24 @@ export function createApp(options: AppOptions = {}): AppDeps {
       return;
     }
 
-    const payment = payments.get(reference);
-    if (!payment) {
-      // We only verify references we issued, so an unverifiable reference
-      // cannot be used to launder an unrelated transaction into an order.
-      res.status(404).json({ verified: false, error: "unknown_reference" });
+    if (!isSecretKey(key)) {
+      res.status(503).json({
+        verified: false,
+        error: "PAYSTACK_SECRET_KEY is not configured",
+      });
       return;
     }
 
-    if (payment.status === "paid") {
+    const payment = payments.get(reference);
+
+    if (payment?.status === "paid") {
       res.json({
         verified: true,
         status: "success",
         amountKobo: payment.amountKobo,
         currency: payment.currency,
+        crossChecked: true,
         alreadySettled: true,
-      });
-      return;
-    }
-
-    if (!isSecretKey(key)) {
-      res.status(503).json({
-        verified: false,
-        error: "PAYSTACK_SECRET_KEY is not configured",
       });
       return;
     }
@@ -214,6 +272,23 @@ export function createApp(options: AppOptions = {}): AppDeps {
           status: txn.status,
           amountKobo: txn.amount,
           currency: txn.currency,
+        });
+        return;
+      }
+
+      if (!payment) {
+        // No local intent for this reference. That is expected when the
+        // function was recycled between /initialize and /verify - the store is
+        // in-memory. Paystack is still the authority on whether money moved,
+        // so accept it, but say the amount was not cross-checked rather than
+        // claiming a check that never ran.
+        res.json({
+          verified: true,
+          status: txn.status,
+          amountKobo: txn.amount,
+          currency: txn.currency,
+          crossChecked: false,
+          channel: txn.channel ?? null,
         });
         return;
       }
@@ -241,6 +316,7 @@ export function createApp(options: AppOptions = {}): AppDeps {
         status: txn.status,
         amountKobo: txn.amount,
         currency: txn.currency,
+        crossChecked: true,
         channel: txn.channel ?? null,
       });
     } catch (err) {
@@ -268,6 +344,22 @@ export function createApp(options: AppOptions = {}): AppDeps {
       settledAt: payment.settledAt,
       settledBy: payment.settledBy,
       channel: payment.channel,
+      // Why it ended up failed, when it did: "abandoned", "amount_mismatch_100"...
+      gatewayStatus: payment.gatewayStatus,
+    });
+  });
+
+  // --------------------------------------------------------------- 404 last
+  // Anything under /api that no route claimed answers in JSON, never with the
+  // SPA's HTML, and echoes the URL the runtime actually received. That echo is
+  // what turns "could not start the payment (404)" into a diagnosable bug when
+  // the rewrite in vercel.json is not doing what we expect.
+  app.use("/api", (req: Request, res: Response) => {
+    res.status(404).json({
+      error: "not_found",
+      path: req.path,
+      requestUrl: (req as Request & { incomingUrl?: string }).incomingUrl ?? req.url,
+      hint: "Not part of the Peppsbite Paystack API. GET /api/health shows what is running.",
     });
   });
 

@@ -121,7 +121,10 @@ export function CheckoutPage() {
     }
     const reference = intent.status === "created" ? intent.reference : makeReference();
     if (intent.status === "unavailable") {
-      showToast("Payment server isn't running. Continuing without server verification.");
+      // Payment still works without the backend (the popup uses the public
+      // key), but nothing will confirm the charge server-side.
+      console.warn(`[paystack] ${intent.message}`);
+      showToast(intent.message);
     }
 
     // 2. Create the order as PENDING. The cart is deliberately NOT cleared yet,
@@ -170,6 +173,11 @@ export function CheckoutPage() {
           "Paystack hasn't confirmed this payment. You will not be charged twice \u2014 check your email and try again.",
         );
         return;
+      }
+      if (result.crossChecked === false) {
+        console.warn(
+          "[paystack] Paystack confirmed the charge but the server had no matching payment intent to compare the amount against.",
+        );
       }
       markOrderPaid(pendingOrder.id);
     } catch {
